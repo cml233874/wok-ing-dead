@@ -21,7 +21,6 @@
 //
 // Pure data lives in RUN.delivery (runtune.js).
 
-import * as THREE from "three";
 import * as L10N from "../i18n/index.js";
 import { RUN } from "./runtune.js";
 
@@ -36,7 +35,7 @@ const STATE = {
 };
 
 export function createDelivery(G, { toast } = {}) {
-  const T = G.THREE || THREE;
+  const T = G.THREE;
   const V3 = T.Vector3;
   const nav = G.physics && G.physics.nav;
   const D = RUN.delivery;
