@@ -45,6 +45,14 @@ export function createRunHud(G) {
   const xpFill = xp.querySelector(".rl-xp-bar i");
   const xpLevel = xp.querySelector(".rl-xp-n");
 
+  // coin display for the delivery/economy system
+  const coins = el(
+    "div",
+    "rl-coins",
+    '<span class="rl-coins-icon">¥</span><b class="rl-coins-n">0</b>',
+  );
+  const coinsNum = coins.querySelector(".rl-coins-n");
+
   const spices = el("div", "rl-spices");
   const toasts = el("div", "rl-toasts");
   const weapons = el("div", "rl-weapons");
@@ -60,7 +68,18 @@ export function createRunHud(G) {
   // while tickets are up the street darkens behind them: this is ordering, not fighting
   const veil = el("div", "rl-veil");
 
-  root.append(clock, boss, spices, toasts, weapons, pools, xp, veil, cards);
+  root.append(
+    clock,
+    boss,
+    coins,
+    spices,
+    toasts,
+    weapons,
+    pools,
+    xp,
+    veil,
+    cards,
+  );
   // directly after the game's HUD: it shows and hides with it (see .hud.on ~ .rl in the
   // stylesheet) and stays underneath the menus
   const hudRoot = G.hud && G.hud.root;
@@ -89,6 +108,7 @@ export function createRunHud(G) {
     weapons: "",
     pools: "",
     ammoKind: "",
+    coins: -1,
   };
   let live = []; // toasts: { el, life }
   let open = null; // { cards, onPick }
@@ -252,6 +272,13 @@ export function createRunHud(G) {
       void clock.offsetWidth;
       clock.classList.add("flash");
     },
+    /** Update the gold-coin counter in the HUD. */
+    setCoins(n) {
+      if (n === last.coins) return;
+      last.coins = n;
+      coinsNum.textContent = String(Math.floor(n));
+      coins.classList.toggle("has", n > 0);
+    },
     // dishes packed so far, as takeaway bags: n of total (n < 0 hides them)
     setBags(n, total) {
       const key = n + "/" + total;
@@ -400,11 +427,13 @@ export function createRunHud(G) {
       api.setSpices([]);
       api.setWeapons([]);
       api.setPools([]);
+      api.setCoins(0);
       last.stage = "";
       last.bags = "";
       last.level = -1;
       last.xp = -1;
       last.wlv = "";
+      last.coins = -1;
     },
     // real seconds
     update(dt) {

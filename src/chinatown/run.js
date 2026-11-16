@@ -21,6 +21,7 @@ import { createPickups } from "./pickups.js";
 import { createRunHud } from "./runhud.js";
 import { createWheel } from "./wheel.js";
 import { createRange } from "./range.js";
+import { createDelivery } from "./delivery.js";
 import { createLoadout, ARMS, AMMO, AMMO_TYPES, MAX_LEVEL } from "./loadout.js";
 import {
   stageAt as stageOf,
@@ -63,6 +64,9 @@ export function createRun(G, hooks) {
   const rng = G.rng && G.rng.fork ? G.rng.fork() : Math.random;
   const pickups = createPickups(G);
   const hud = createRunHud(G);
+  const delivery = createDelivery(G, {
+    toast: (html, kind) => hud.toast(html, kind),
+  });
   // the firing range (/?range=1): this same run with the timeline off and a panel instead
   let range = null;
   const sites = (G.level && G.level.supplySites) || [];
@@ -83,6 +87,7 @@ export function createRun(G, hooks) {
     level: 0,
     xp: 0,
     kills: 0,
+    money: 0, // gold coins (delivery economy)
     sirens: 0,
     spice: {},
     spawnT: 0,
@@ -799,6 +804,9 @@ export function createRun(G, hooks) {
       charred: c.charred,
       t: S.t,
     });
+    // spawn a delivery rider to pick up the packed dish
+    delivery.spawn(c.pos);
+    hud.toast(L10N.t("delivery.arriving"), "");
     if (S.served >= stoveCount()) {
       // the last one: the smell of all three brings the house special
       S.bossDue = S.t + RUN.boss.after;
@@ -1436,6 +1444,8 @@ export function createRun(G, hooks) {
   function onKill(e) {
     if (!S.active || !e) return;
     S.kills++;
+    // coin reward for every zombie kill
+    delivery.onZombieKill();
     const rank = e.rank || "";
     addXp(killXp(rank, e.type, dishHot(S.cook)));
     const pos = e.pos || (e.enemy && e.enemy.pos);
@@ -1518,6 +1528,20 @@ export function createRun(G, hooks) {
     const targets = loadout.armory && loadout.armory.targets;
     if (targets) targets.struck(targets.of(e.enemy), { head: !!e.weak });
   });
+  // delivery rider friendly-fire detection: every shot checks if it hit a rider
+  G.events.on("weapon:fire", () => {
+    if (!S.active || !delivery.riders.length) return;
+    const cam = G.camera;
+    if (!cam) return;
+    const origin = new V3();
+    const dir = new V3();
+    cam.getWorldPosition(origin);
+    cam.getWorldDirection(dir);
+    const hit = delivery.raycast(origin, dir, 80);
+    if (hit) {
+      delivery.bulletHit(hit.rider, hit.headshot);
+    }
+  });
   G.events.on("player:dead", () => {
     if (!S.active) return;
     if (S.picking) {
@@ -1529,6 +1553,7 @@ export function createRun(G, hooks) {
     G.time.scale = S.scale = 1;
     freeHands();
     loadout.rest();
+    delivery.stop();
     bank(false);
   });
 
@@ -1538,6 +1563,7 @@ export function createRun(G, hooks) {
     state: S,
     hud,
     pickups,
+    delivery,
     loadout,
     profile,
     get armory() {
@@ -1586,6 +1612,7 @@ export function createRun(G, hooks) {
         level: 0,
         xp: 0,
         kills: 0,
+        money: 0,
         sirens: 0,
         spice: pre.spice,
         spawnT: 1.2,
@@ -1622,6 +1649,7 @@ export function createRun(G, hooks) {
       wheel.hide();
       WK.noFire = false;
       pickups.reset();
+      delivery.reset();
       hud.reset();
       loadout.reset();
       applyStats();
@@ -1666,6 +1694,7 @@ export function createRun(G, hooks) {
       applyStats();
       loadout.stop();
       pickups.reset();
+      delivery.stop();
       hud.reset();
       hud.show(false);
     },
@@ -1741,12 +1770,16 @@ export function createRun(G, hooks) {
       burstTick(dt);
       pickups.update(dt);
       pickupTick(dt);
+      delivery.update(dt);
+      // sync coin balance between delivery module and run state
+      S.money = delivery.money;
       loadout.update();
       lowTick(real);
 
       hud.setCourse(
         S.bossSeen || (range && !range.course) ? "" : stageAt(S.clock).id,
       );
+      hud.setCoins(S.money);
       hud.setBags(range || S.bossDead ? -1 : S.served, stoveCount());
       hud.setXp(S.xp / RUN.xp.need(S.level), S.level + 1);
       const cur = loadout.cur;
@@ -1866,6 +1899,7 @@ export function createRun(G, hooks) {
     summary() {
       return {
         kills: S.kills,
+        money: S.money,
         level: S.level + 1,
         sirens: S.sirens,
         dishes: S.served,

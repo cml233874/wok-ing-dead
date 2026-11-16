@@ -489,4 +489,15 @@ export default {
   "run.spice.rice": "もち米",
   "run.spice.rice.d": "頭に当てると {c}% で封印、三枚で金縛り",
   "run.listSep": "、",
+
+  // デリバリーライダー & コイン
+  "delivery.coins": "コイン",
+  "delivery.success": "配達完了 —— +{n} コイン",
+  "delivery.hit": "誤射！ライダーに命中 —— {n} コイン",
+  "delivery.headshot": "ライダーをヘッドショット —— {n} コイン",
+  "delivery.zombieKill": "ライダーがゾンビに殺された！—— {n} コイン",
+  "delivery.killed": "ライダーが死亡 —— {n} コイン",
+  "delivery.arriving": "配達ライダーが来た——守れ！",
+  "delivery.pickup": "ライダーが注文を受け取り中",
+  "delivery.escaped": "ライダーが安全に離脱",
 };

@@ -1137,6 +1137,32 @@ kbd {
   animation: objflash 0.6s var(--ease-out);
 }
 
+/* coin display */
+.rl-coins {
+  position: absolute;
+  top: calc(84px + var(--sat));
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 15px/1 var(--f-ui);
+  color: var(--paper-dim);
+  transition: color 0.3s;
+  pointer-events: none;
+}
+.rl-coins.has {
+  color: #ffd700;
+}
+.rl-coins-icon {
+  font-size: 18px;
+  color: #ffd700;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+.rl-coins-n {
+  min-width: 28px;
+  text-align: right;
+}
+
 /* boss */
 .rl-boss {
   position: absolute;

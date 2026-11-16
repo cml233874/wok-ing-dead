@@ -8,6 +8,23 @@
 
 export const RUN = {
   bossAt: 540, // on the meal's clock (see `simmer` below): where the last course begins
+  // Delivery rider and coin economy (MVP). Pure data, no game objects.
+  delivery: {
+    zombieKillReward: 5, // coins per zombie killed
+    deliveryReward: 30, // coins for a successful delivery
+    penaltyPerShot: -10, // coins per bullet hitting the rider
+    penaltyHeadshot: -100, // coins for headshotting / killing the rider
+    penaltyZombieKill: -50, // coins when zombies kill the rider
+    riderHp: 10, // rider health in hits (player bullets)
+    riderZombieHp: 30, // zombie bites to kill the rider
+    scooterSpeed: 8, // m/s on the scooter
+    walkSpeed: 2.2, // m/s on foot through the crowd
+    pickupTime: 1.5, // seconds to pick up the order at the stove
+    dismountDist: 5, // metres from stove to dismount
+    zombieBiteRange: 1.2, // metres: zombie mouth-to-rider
+    zombieBiteInterval: 1, // seconds between bites
+    zombieAggroRange: 10, // metres: zombies notice the rider
+  },
   // Courses of the meal, by the meal's clock. Between one entry and the next the numbers
   // slide from the first value to the second: alive = how many may be up at once, every = seconds between spawns,
   // runner = share of walkers that sprint, brute = share of heavies, bloater = share that burst.

@@ -500,4 +500,15 @@ export default {
   "run.spice.rice": "Sticky Rice",
   "run.spice.rice.d": "Head hits seal ({c}%); three seals pin",
   "run.listSep": ", ",
+
+  // delivery rider & coins
+  "delivery.coins": "Coins",
+  "delivery.success": "Delivery complete — +{n} coins",
+  "delivery.hit": "Friendly fire! Rider hit — {n} coins",
+  "delivery.headshot": "Rider killed (headshot) — {n} coins",
+  "delivery.zombieKill": "Rider down! Zombies got the rider — {n} coins",
+  "delivery.killed": "Rider killed — {n} coins",
+  "delivery.arriving": "Delivery rider incoming — protect them!",
+  "delivery.pickup": "Rider is picking up the order",
+  "delivery.escaped": "Rider escaped safely",
 };

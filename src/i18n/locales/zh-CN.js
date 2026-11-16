@@ -481,4 +481,15 @@ export default {
   "run.spice.rice": "糯米",
   "run.spice.rice.d": "爆头 {c}% 贴符，三张定身",
   "run.listSep": "、",
+
+  // 外卖小哥 & 金币
+  "delivery.coins": "金币",
+  "delivery.success": "外卖送达 —— +{n} 金币",
+  "delivery.hit": "误伤小哥！—— {n} 金币",
+  "delivery.headshot": "小哥被爆头击杀 —— {n} 金币",
+  "delivery.zombieKill": "小哥被僵尸咬死！—— {n} 金币",
+  "delivery.killed": "小哥被击杀 —— {n} 金币",
+  "delivery.arriving": "外卖小哥来了——保护他！",
+  "delivery.pickup": "小哥正在取餐",
+  "delivery.escaped": "小哥安全离开",
 };
