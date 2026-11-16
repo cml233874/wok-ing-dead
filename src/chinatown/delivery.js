@@ -90,13 +90,13 @@ export function createDelivery(G, { toast } = {}) {
     const wheelGeo = new T.TorusGeometry(0.16, 0.05, 8, 16);
     const hubGeo = new T.CylinderGeometry(0.04, 0.04, 0.1, 8);
     // front wheel
-    const fw = sm(wheelGeo, matDark, 0, 0.16, 0.62);
-    fw.rotation.y = Math.PI / 2;
+    const frontWheel = sm(wheelGeo, matDark, 0, 0.16, 0.62);
+    frontWheel.rotation.y = Math.PI / 2;
     const fh = sm(hubGeo, matGrey, 0, 0.16, 0.62);
     fh.rotation.z = Math.PI / 2;
     // rear wheel
-    const rw = sm(wheelGeo, matDark, 0, 0.16, -0.52);
-    rw.rotation.y = Math.PI / 2;
+    const rearWheel = sm(wheelGeo, matDark, 0, 0.16, -0.52);
+    rearWheel.rotation.y = Math.PI / 2;
     const rh = sm(hubGeo, matGrey, 0, 0.16, -0.52);
     rh.rotation.z = Math.PI / 2;
 
@@ -189,6 +189,8 @@ export function createDelivery(G, { toast } = {}) {
     );
     sg.children[sg.children.length - 1].rotation.z = Math.PI / 2;
 
+    sg._frontWheel = frontWheel;
+    sg._rearWheel = rearWheel;
     return sg;
   }
 
@@ -236,8 +238,20 @@ export function createDelivery(G, { toast } = {}) {
     };
 
     // ── legs (two dark cylinders) ──
-    m(new T.CylinderGeometry(0.07, 0.08, 0.7, 6), matDark, -0.1, 0.35, 0);
-    m(new T.CylinderGeometry(0.07, 0.08, 0.7, 6), matDark, 0.1, 0.35, 0);
+    const leftLeg = m(
+      new T.CylinderGeometry(0.07, 0.08, 0.7, 6),
+      matDark,
+      -0.1,
+      0.35,
+      0,
+    );
+    const rightLeg = m(
+      new T.CylinderGeometry(0.07, 0.08, 0.7, 6),
+      matDark,
+      0.1,
+      0.35,
+      0,
+    );
 
     // ── torso (yellow raincoat) ──
     const torso = m(new T.BoxGeometry(0.38, 0.55, 0.28), matYellow, 0, 1.0, 0);
@@ -319,7 +333,7 @@ export function createDelivery(G, { toast } = {}) {
     m(new T.BoxGeometry(0.09, 0.06, 0.14), matDark, -0.1, 0.03, 0.02);
     m(new T.BoxGeometry(0.09, 0.06, 0.14), matDark, 0.1, 0.03, 0.02);
 
-    return { group: g, head, torso };
+    return { group: g, head, torso, leftLeg, rightLeg, leftArm, rightArm };
   }
 
   // head sphere for headshot detection (invisible, kept for raycasting)
@@ -456,6 +470,14 @@ export function createDelivery(G, { toast } = {}) {
       vest,
       head,
       scooter,
+      // animation refs
+      leftLeg: riderMesh.leftLeg,
+      rightLeg: riderMesh.rightLeg,
+      leftArm: riderMesh.leftArm,
+      rightArm: riderMesh.rightArm,
+      frontWheel: scooter._frontWheel,
+      rearWheel: scooter._rearWheel,
+      animT: 0, // animation time accumulator
       state: STATE.RIDE_IN,
       hp: D.riderHp,
       maxHp: D.riderHp,
@@ -591,6 +613,35 @@ export function createDelivery(G, { toast } = {}) {
     if (toast) toast(L10N.t(key, vars), kind);
   }
 
+  // ── procedural animation for walk (legs/arms swing) and ride (wheel rotation) ──
+  function animateRider(rider, dt) {
+    rider.animT += dt;
+    const t = rider.animT;
+    if (rider.state === STATE.WALK || rider.state === STATE.PICKUP) {
+      // walking: legs swing forward/back, arms swing opposite
+      const freq = 6; // swing frequency
+      const legAmp = 0.5; // radians
+      const armAmp = 0.35;
+      const swing = Math.sin(t * freq);
+      if (rider.leftLeg) rider.leftLeg.rotation.x = swing * legAmp;
+      if (rider.rightLeg) rider.rightLeg.rotation.x = -swing * legAmp;
+      if (rider.leftArm) rider.leftArm.rotation.x = -swing * armAmp;
+      if (rider.rightArm) rider.rightArm.rotation.x = swing * armAmp;
+    } else {
+      // reset limbs when not walking
+      if (rider.leftLeg) rider.leftLeg.rotation.x = 0;
+      if (rider.rightLeg) rider.rightLeg.rotation.x = 0;
+      if (rider.leftArm) rider.leftArm.rotation.x = 0;
+      if (rider.rightArm) rider.rightArm.rotation.x = 0;
+    }
+    if (rider.state === STATE.RIDE_IN || rider.state === STATE.RIDE_OUT) {
+      // wheel rotation based on scooter speed
+      const wheelSpeed = D.scooterSpeed * 3; // visual rotation speed (rad/s)
+      if (rider.frontWheel) rider.frontWheel.rotation.x += wheelSpeed * dt;
+      if (rider.rearWheel) rider.rearWheel.rotation.x += wheelSpeed * dt;
+    }
+  }
+
   // ── per-frame update for one rider ──
   function updateRider(rider, dt) {
     if (!rider.alive && rider.state === STATE.DEAD) {
@@ -604,6 +655,7 @@ export function createDelivery(G, { toast } = {}) {
     }
 
     syncHitPos(rider);
+    animateRider(rider, dt);
 
     switch (rider.state) {
       case STATE.RIDE_IN: {

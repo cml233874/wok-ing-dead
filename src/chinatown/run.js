@@ -87,7 +87,8 @@ export function createRun(G, hooks) {
           (G.player.maxHealth || 100) + SH.shieldHp,
         );
       }
-      // wok & ammo bonuses are read from shop.bought in the update loop (see applyStats)
+      // wok & ammo bonuses are applied via applyStats
+      applyStats();
     },
   });
   // the firing range (/?range=1): this same run with the timeline off and a panel instead
@@ -241,10 +242,17 @@ export function createRun(G, hooks) {
   // ---------- derived numbers
   function applyStats() {
     const sp = S.active ? S.spice : {};
+    const sb = shop.bought;
+    const SH = RUN.shop;
     loadout.setCapMul(
-      1 + spiceValue("portion", sp.portion) + (S.active ? S.bonusCap : 0),
+      1 +
+        spiceValue("portion", sp.portion) +
+        (S.active ? S.bonusCap : 0) +
+        (sb.ammo ? SH.ammoBonus : 0),
     );
-    loadout.setMods(weaponMods(sp));
+    const wm = weaponMods(sp);
+    if (sb.wok) wm.damage *= 1 + SH.wokBonus;
+    loadout.setMods(wm);
     loadout.setInfusions(infusionsOf(sp));
     const P = G.player;
     if (P && P.tuning && baseTune) {
