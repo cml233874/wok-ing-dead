@@ -119,8 +119,12 @@ export function createFoodtruck(G) {
 
   // canopy roof (flat box)
   const roofY = canopyBase + canopyH + 0.02;
-  const roof = m(new T.BoxGeometry(bodyW + 0.2, 0.04, bodyD + 0.3), steelDark);
+  const roof = m(new T.BoxGeometry(bodyW + 0.2, 0.06, bodyD + 0.3), red);
   roof.position.set(0, roofY, 0);
+
+  // ── red awning overhang (concept art: draping front canopy) ──
+  const awning = m(new T.BoxGeometry(bodyW + 0.3, 0.03, 0.6), red);
+  awning.position.set(0, roofY - 0.03, bodyD / 2 + 0.45);
 
   // ── signboard on canopy front (sunburst orange background) ──
   const signW = 1.6,

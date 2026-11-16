@@ -1684,6 +1684,13 @@ export function createRun(G, hooks) {
       WK.noFire = false;
       pickups.reset();
       delivery.reset();
+      // ── fixed-stall: lock the player behind the food truck ──
+      const startPos =
+        G.level && G.level.playerStart && G.level.playerStart.pos;
+      if (startPos) {
+        G.fixedStall = true;
+        G.fixedStallPos = { x: startPos.x, z: startPos.z };
+      }
       shop.reset();
       hud.reset();
       loadout.reset();
@@ -1715,6 +1722,8 @@ export function createRun(G, hooks) {
         return;
       }
       S.active = false;
+      G.fixedStall = false;
+      G.fixedStallPos = null;
       unplate();
       S.cook = null;
       S.hands = "";

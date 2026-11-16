@@ -61241,8 +61241,8 @@ void main() {
           ? (A.crouching = !0)
           : A.crouching && F() && (A.crouching = !1),
         (o = A.crouching ? Nt.crouchHeight : Nt.standHeight));
-      let le = oe ? G.move.x : 0,
-        xe = oe ? G.move.y : 0,
+      let le = oe && !n.fixedStall ? G.move.x : 0,
+        xe = oe && !n.fixedStall ? G.move.y : 0,
         j = le * le + xe * xe > 0.01,
         O =
           oe &&
@@ -61278,7 +61278,10 @@ void main() {
         ? (A.onGround || j) && ((A.vel.x = U.x), (A.vel.z = U.z))
         : ((A.vel.x += (se / me) * ge), (A.vel.z += (fe / me) * ge)),
         (r = A.onGround ? Nt.coyote : Math.max(0, r - J)),
-        (a = oe && G.pressed("jump") ? Nt.jumpBuffer : Math.max(0, a - J)),
+        (a =
+          oe && !n.fixedStall && G.pressed("jump")
+            ? Nt.jumpBuffer
+            : Math.max(0, a - J)),
         a > 0 &&
           r > 0 &&
           (!A.crouching || F()) &&
@@ -61299,6 +61302,13 @@ void main() {
         (D &&
           ((A.pos.x = Hn(A.pos.x, D.min.x + 0.4, D.max.x - 0.4)),
           (A.pos.z = Hn(A.pos.z, D.min.z + 0.4, D.max.z - 0.4))),
+        // ── fixed-stall: clamp pos to start, zero XZ velocity, stay grounded ──
+        n.fixedStall &&
+          n.fixedStallPos &&
+          ((A.pos.x = n.fixedStallPos.x),
+          (A.pos.z = n.fixedStallPos.z),
+          (A.vel.x = 0),
+          (A.vel.z = 0)),
         (A.onGround = !!P.onGround),
         P.surface && (L = P.surface),
         A.onGround)

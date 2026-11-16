@@ -544,14 +544,23 @@ export async function createLevel(G) {
   const lights = createLights(ctx);
 
   // ---------------- gameplay data ----------------
-  const playerStart = { pos: V(-33.5, 0, 6), yaw: -Math.PI / 2 };
-  const objectives = marks.sirens.map((s, i) => ({
-    id: "relay_" + "abc"[i],
-    label: ["Siren A — Crossroads", "Siren B — Market", "Siren C — Temple"][i],
-    zone: ["street", "market", "temple"][i],
-    pos: V(s.x, s.y, s.z),
-    object: s.object,
-  }));
+  const playerStart = { pos: V(-24, 0, 5), yaw: -Math.PI / 2 };
+  // ── fixed-stall: override all stove/relay positions to the food truck ──
+  const TRUCK_POS = V(-24, 0, 5);
+  const objectives = marks.sirens.map((s, i) => {
+    const obj = {
+      id: "relay_" + "abc"[i],
+      label: ["Stove A", "Stove B", "Stove C"][i],
+      zone: "street",
+      pos: TRUCK_POS.clone(),
+      object: s.object,
+    };
+    // Move the 3D siren object to the truck so interaction checks pass
+    if (s.object && s.object.position) {
+      s.object.position.set(TRUCK_POS.x, TRUCK_POS.y, TRUCK_POS.z);
+    }
+    return obj;
+  });
   const ground = (x, z, zone) => ({ pos: V(x, 0, z), zone, type: "ground" });
   const enemySpawns = [
     // street: gate plaza, alley mouths, both ends of the lane
