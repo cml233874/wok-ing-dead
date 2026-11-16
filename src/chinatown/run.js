@@ -22,6 +22,8 @@ import { createRunHud } from "./runhud.js";
 import { createWheel } from "./wheel.js";
 import { createRange } from "./range.js";
 import { createDelivery } from "./delivery.js";
+import { createFoodtruck } from "./foodtruck.js";
+import { createShop } from "./shop.js";
 import { createLoadout, ARMS, AMMO, AMMO_TYPES, MAX_LEVEL } from "./loadout.js";
 import {
   stageAt as stageOf,
@@ -66,6 +68,27 @@ export function createRun(G, hooks) {
   const hud = createRunHud(G);
   const delivery = createDelivery(G, {
     toast: (html, kind) => hud.toast(html, kind),
+  });
+  // food truck landmark (visual only)
+  const foodtruck = createFoodtruck(G);
+  // upgrade shop (B key overlay)
+  const shop = createShop(G, {
+    getMoney: () => delivery.money,
+    setMoney: (v) => {
+      delivery.money = v;
+    },
+    toast: (html, kind) => hud.toast(html, kind),
+    onPurchase: (id, bought) => {
+      // MVP: apply minimal real effects where possible
+      const SH = RUN.shop;
+      if (id === "shield" && G.player) {
+        G.player.health = Math.min(
+          (G.player.health || 0) + SH.shieldHp,
+          (G.player.maxHealth || 100) + SH.shieldHp,
+        );
+      }
+      // wok & ammo bonuses are read from shop.bought in the update loop (see applyStats)
+    },
   });
   // the firing range (/?range=1): this same run with the timeline off and a panel instead
   let range = null;
@@ -1554,6 +1577,7 @@ export function createRun(G, hooks) {
     freeHands();
     loadout.rest();
     delivery.stop();
+    shop.show(false);
     bank(false);
   });
 
@@ -1564,6 +1588,8 @@ export function createRun(G, hooks) {
     hud,
     pickups,
     delivery,
+    shop,
+    foodtruck,
     loadout,
     profile,
     get armory() {
@@ -1650,6 +1676,7 @@ export function createRun(G, hooks) {
       WK.noFire = false;
       pickups.reset();
       delivery.reset();
+      shop.reset();
       hud.reset();
       loadout.reset();
       applyStats();
@@ -1695,6 +1722,7 @@ export function createRun(G, hooks) {
       loadout.stop();
       pickups.reset();
       delivery.stop();
+      shop.show(false);
       hud.reset();
       hud.show(false);
     },
@@ -1721,6 +1749,13 @@ export function createRun(G, hooks) {
       // while tickets are up the player only chooses: no walking, firing, aiming or turning
       // (the free mouse is for the tickets). The input is read before the player updates.
       if (S.picking && G.input) {
+        const I = G.input;
+        if (I.move) I.move.x = I.move.y = 0;
+        if (I.look) I.look.dx = I.look.dy = 0;
+        I.fire = I.ads = I.sprint = I.crouch = false;
+      }
+      // shop overlay open: suppress all game input
+      if (shop.open && G.input) {
         const I = G.input;
         if (I.move) I.move.x = I.move.y = 0;
         if (I.look) I.look.dx = I.look.dy = 0;

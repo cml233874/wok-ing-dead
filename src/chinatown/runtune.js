@@ -25,6 +25,15 @@ export const RUN = {
     zombieBiteInterval: 1, // seconds between bites
     zombieAggroRange: 10, // metres: zombies notice the rider
   },
+  // Upgrade shop: costs in gold coins.  MVP: one purchase per upgrade per run.
+  shop: {
+    wok: 300, // 🔥 wok-hei / damage multiplier
+    ammo: 400, // 🔫 ammo capacity bonus
+    shield: 350, // 🛡 temporary shield HP
+    wokBonus: 0.25, // +25% damage when wok upgrade is bought
+    ammoBonus: 0.3, // +30% ammo cap when ammo upgrade is bought
+    shieldHp: 50, // bonus HP from shield upgrade
+  },
   // Courses of the meal, by the meal's clock. Between one entry and the next the numbers
   // slide from the first value to the second: alive = how many may be up at once, every = seconds between spawns,
   // runner = share of walkers that sprint, brute = share of heavies, bloater = share that burst.

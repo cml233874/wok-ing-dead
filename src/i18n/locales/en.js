@@ -511,4 +511,15 @@ export default {
   "delivery.arriving": "Delivery rider incoming — protect them!",
   "delivery.pickup": "Rider is picking up the order",
   "delivery.escaped": "Rider escaped safely",
+
+  // upgrade shop
+  "shop.title": "Upgrade Shop",
+  "shop.hint": "[B] Close",
+  "shop.poor": "Not enough coins!",
+  "shop.wok": "Wok Hei",
+  "shop.wok.d": "+25% damage",
+  "shop.ammo": "Ammo Cache",
+  "shop.ammo.d": "+30% ammo capacity",
+  "shop.shield": "Shield",
+  "shop.shield.d": "+50 bonus HP",
 };

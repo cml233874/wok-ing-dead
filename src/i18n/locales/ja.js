@@ -500,4 +500,15 @@ export default {
   "delivery.arriving": "配達ライダーが来た——守れ！",
   "delivery.pickup": "ライダーが注文を受け取り中",
   "delivery.escaped": "ライダーが安全に離脱",
+
+  // アップグレードショップ
+  "shop.title": "アップグレード",
+  "shop.hint": "[B] 閉じる",
+  "shop.poor": "コイン不足！",
+  "shop.wok": "鏑気",
+  "shop.wok.d": "ダメージ +25%",
+  "shop.ammo": "弾薬庫",
+  "shop.ammo.d": "弾薬容量 +30%",
+  "shop.shield": "シールド",
+  "shop.shield.d": "+50 シールドHP",
 };

@@ -1163,6 +1163,108 @@ kbd {
   text-align: right;
 }
 
+/* upgrade shop overlay (B key) */
+.rl-shop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 6, 10, 0.82);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.rl-shop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rl-shop-title {
+  font: 800 22px/1 var(--f-display);
+  letter-spacing: var(--trk-m);
+  color: #ffd700;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+.rl-shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(400px, 88vw);
+}
+.rl-shop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  transition:
+    border-color 0.2s,
+    opacity 0.2s;
+}
+.rl-shop-row:hover {
+  border-color: rgba(255, 215, 0, 0.4);
+}
+.rl-shop-row.bought {
+  opacity: 0.5;
+  border-color: rgba(100, 200, 100, 0.3);
+}
+.rl-shop-row.poor {
+  opacity: 0.6;
+}
+.rl-shop-icon {
+  font-size: 26px;
+  min-width: 36px;
+  text-align: center;
+}
+.rl-shop-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rl-shop-name {
+  font: 700 15px/1.2 var(--f-ui);
+  color: var(--paper);
+}
+.rl-shop-desc {
+  font: 400 12px/1.2 var(--f-ui);
+  color: var(--paper-dim);
+}
+.rl-shop-buy {
+  font: 700 14px/1 var(--f-ui);
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.rl-shop-buy:hover:not(:disabled) {
+  background: rgba(255, 215, 0, 0.25);
+}
+.rl-shop-buy:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.rl-shop-hint {
+  margin-top: 18px;
+  font: 400 12px/1 var(--f-ui);
+  color: var(--paper-dim);
+  letter-spacing: 0.05em;
+}
+
 /* boss */
 .rl-boss {
   position: absolute;

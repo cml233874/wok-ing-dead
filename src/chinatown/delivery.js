@@ -1,15 +1,17 @@
 // Delivery rider NPC and gold-coin economy for the run.
 //
-// A rider arrives after every dish is packed: it enters from a street edge on a scooter,
-// dismounts near the stove, walks through the zombie crowd to pick up the order, collects
-// it (+30 coins), then rides away safely. The player must protect the rider from zombies
-// (each bite costs a point of rider HP; 30 bites kill it → -50 coins) and must not shoot
-// the rider (each bullet -1 HP = -10 coins; headshot kills = -100 coins).
+// A rider arrives after every dish is packed: it enters from a street edge on a bright-
+// yellow electric scooter, dismounts near the stove, walks through the zombie crowd to
+// pick up the order, collects it (+30 coins), then rides away safely. The player must
+// protect the rider from zombies (each bite costs a point of rider HP; 30 bites kill it
+// → -50 coins) and must not shoot the rider (each bullet -1 HP = -10 coins; headshot
+// kills = -100 coins).
 //
 // Zombies gain +5 coins per kill.
 //
-// The rider reuses a zombie body mesh for MVP (no custom model yet). The scooter is a
-// simple box geometry placeholder. Navigation uses the game's existing A* grid.
+// The rider is a rabbit-helmet delivery guy (programmatic geometry). The scooter is a
+// bright-yellow electric moped (body + handlebars + seat + wheels). Navigation uses the
+// game's existing A* grid.
 //
 // This module is self-contained: run.js calls createDelivery(G) once, then
 //   delivery.spawn(stovePos)   — after a dish is packed (serve)
@@ -46,36 +48,284 @@ export function createDelivery(G, { toast } = {}) {
   // ── rider pool (one rider at a time for MVP) ──
   const riders = []; // active rider objects
 
-  // ── scooter placeholder geometry ──
-  const scooterGeo = new T.BoxGeometry(0.5, 0.8, 1.6);
-  const scooterMat = new T.MeshStandardMaterial({
-    color: 0x2288aa,
-    roughness: 0.6,
-    metalness: 0.3,
-  });
+  // ── colours ──
+  const YELLOW = 0xf5a623; // delivery brand yellow
+  const YELLOW_BRIGHT = 0xffcc00;
+  const DARK = 0x222222;
+  const SKIN = 0xffddaa;
+  const GREY = 0x444444;
+  // ── build the yellow electric scooter / moped ──
+  // Called once per rider spawn; returns a T.Group that is toggled visible during
+  // rideIn / rideOut and hidden while walking.
+  function buildScooter() {
+    const sg = new T.Group();
+    sg.name = "delivery-scooter";
 
-  // ── rider body: borrow a zombie-like capsule/box for hit detection ──
-  // For MVP we create a simple humanoid placeholder (coloured box-man).
-  const riderGeo = new T.BoxGeometry(0.4, 1.6, 0.4);
-  const riderMat = new T.MeshStandardMaterial({
-    color: 0x33cc66,
-    roughness: 0.7,
+    const sm = (geo, mat, x, y, z) => {
+      const mesh = new T.Mesh(geo, mat.clone());
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      sg.add(mesh);
+      return mesh;
+    };
+
+    // ── main body / frame (tapered box, yellow) ──
+    sm(new T.BoxGeometry(0.32, 0.28, 1.1), matYellow, 0, 0.38, 0);
+
+    // front fairing (narrower wedge in front)
+    sm(new T.BoxGeometry(0.24, 0.35, 0.3), matYellow, 0, 0.42, 0.58);
+
+    // footboard / running board (flat dark plate under rider's feet)
+    sm(new T.BoxGeometry(0.38, 0.04, 0.5), matDark, 0, 0.22, 0.05);
+
+    // ── seat (dark cushion on top of body) ──
+    sm(new T.BoxGeometry(0.26, 0.08, 0.45), matDark, 0, 0.56, -0.12);
+    // seat back rest (small bump)
+    sm(new T.BoxGeometry(0.22, 0.12, 0.06), matDark, 0, 0.62, -0.37);
+
+    // ── rear cargo rack / flat platform for the delivery box ──
+    sm(new T.BoxGeometry(0.34, 0.03, 0.3), matGrey, 0, 0.52, -0.52);
+
+    // ── wheels (two, front and rear) ──
+    const wheelGeo = new T.TorusGeometry(0.16, 0.05, 8, 16);
+    const hubGeo = new T.CylinderGeometry(0.04, 0.04, 0.1, 8);
+    // front wheel
+    const fw = sm(wheelGeo, matDark, 0, 0.16, 0.62);
+    fw.rotation.y = Math.PI / 2;
+    const fh = sm(hubGeo, matGrey, 0, 0.16, 0.62);
+    fh.rotation.z = Math.PI / 2;
+    // rear wheel
+    const rw = sm(wheelGeo, matDark, 0, 0.16, -0.52);
+    rw.rotation.y = Math.PI / 2;
+    const rh = sm(hubGeo, matGrey, 0, 0.16, -0.52);
+    rh.rotation.z = Math.PI / 2;
+
+    // front fork (two thin cylinders from body down to front wheel axle)
+    const forkGeo = new T.CylinderGeometry(0.018, 0.018, 0.38, 5);
+    const lfork = sm(forkGeo, matGrey, -0.08, 0.3, 0.58);
+    lfork.rotation.x = 0.25;
+    const rfork = sm(forkGeo, matGrey, 0.08, 0.3, 0.58);
+    rfork.rotation.x = 0.25;
+
+    // ── handlebars (horizontal bar + two grips) ──
+    sm(new T.CylinderGeometry(0.015, 0.015, 0.42, 5), matGrey, 0, 0.6, 0.55);
+    // rotate to horizontal
+    sg.children[sg.children.length - 1].rotation.z = Math.PI / 2;
+    // grips (dark, at ends of handlebar)
+    sm(
+      new T.CylinderGeometry(0.022, 0.022, 0.08, 5),
+      matDark,
+      -0.22,
+      0.6,
+      0.55,
+    );
+    sg.children[sg.children.length - 1].rotation.z = Math.PI / 2;
+    sm(new T.CylinderGeometry(0.022, 0.022, 0.08, 5), matDark, 0.22, 0.6, 0.55);
+    sg.children[sg.children.length - 1].rotation.z = Math.PI / 2;
+
+    // ── headlight (small bright disc on front) ──
+    const hlMat = new T.MeshStandardMaterial({
+      color: 0xffffcc,
+      emissive: 0xffffcc,
+      emissiveIntensity: 0.5,
+      roughness: 0.3,
+    });
+    sm(new T.CylinderGeometry(0.05, 0.05, 0.03, 8), hlMat, 0, 0.48, 0.74);
+    sg.children[sg.children.length - 1].rotation.x = Math.PI / 2;
+
+    // ── tail light (small red on rear) ──
+    const tlMat = new T.MeshStandardMaterial({
+      color: 0xcc2222,
+      emissive: 0xcc2222,
+      emissiveIntensity: 0.4,
+      roughness: 0.4,
+    });
+    sm(new T.CylinderGeometry(0.03, 0.03, 0.02, 6), tlMat, 0, 0.42, -0.68);
+    sg.children[sg.children.length - 1].rotation.x = Math.PI / 2;
+
+    // ── yellow side panels / brand accent ──
+    sm(new T.BoxGeometry(0.02, 0.18, 0.5), matYellowBright, -0.17, 0.4, 0);
+    sm(new T.BoxGeometry(0.02, 0.18, 0.5), matYellowBright, 0.17, 0.4, 0);
+
+    // ── rear mud-guard (small arc behind rear wheel) ──
+    sm(new T.BoxGeometry(0.28, 0.03, 0.2), matYellow, 0, 0.33, -0.58);
+
+    // ── rear delivery box (insulated food container on cargo rack) ──
+    // main box body (yellow with dark border)
+    sm(new T.BoxGeometry(0.44, 0.38, 0.36), matYellow, 0, 0.76, -0.52);
+    // lid (slightly wider, thin)
+    sm(new T.BoxGeometry(0.46, 0.04, 0.38), matYellowBright, 0, 0.97, -0.52);
+    // dark border edges (top & bottom trim)
+    sm(new T.BoxGeometry(0.46, 0.025, 0.38), matDark, 0, 0.56, -0.52);
+    // vertical dark corner strips
+    sm(new T.BoxGeometry(0.025, 0.38, 0.025), matDark, -0.22, 0.76, -0.34);
+    sm(new T.BoxGeometry(0.025, 0.38, 0.025), matDark, 0.22, 0.76, -0.34);
+    sm(new T.BoxGeometry(0.025, 0.38, 0.025), matDark, -0.22, 0.76, -0.7);
+    sm(new T.BoxGeometry(0.025, 0.38, 0.025), matDark, 0.22, 0.76, -0.7);
+    // horizontal partition line (suggests compartments inside)
+    sm(new T.BoxGeometry(0.4, 0.015, 0.02), matDark, 0, 0.76, -0.33);
+    // wok icon on front face (small dark disc + handle)
+    const iconMat = new T.MeshStandardMaterial({
+      color: DARK,
+      roughness: 0.7,
+      emissive: 0x111111,
+      emissiveIntensity: 0.1,
+    });
+    const wokIcon = sm(
+      new T.SphereGeometry(0.06, 8, 4, 0, Math.PI * 2, 0, Math.PI * 0.5),
+      iconMat,
+      0,
+      0.78,
+      -0.33,
+    );
+    wokIcon.rotation.x = Math.PI; // bowl shape
+    // tiny handle on wok icon
+    sm(
+      new T.CylinderGeometry(0.008, 0.008, 0.07, 4),
+      iconMat,
+      0.08,
+      0.78,
+      -0.33,
+    );
+    sg.children[sg.children.length - 1].rotation.z = Math.PI / 2;
+
+    return sg;
+  }
+
+  // ── shared materials (cloned per rider to allow independent colour tweaks) ──
+  const matYellow = new T.MeshStandardMaterial({
+    color: YELLOW,
+    roughness: 0.5,
+    metalness: 0.05,
+    emissive: YELLOW,
+    emissiveIntensity: 0.15,
+  });
+  const matYellowBright = new T.MeshStandardMaterial({
+    color: YELLOW_BRIGHT,
+    roughness: 0.4,
+    metalness: 0.0,
+    emissive: YELLOW_BRIGHT,
+    emissiveIntensity: 0.25,
+  });
+  const matDark = new T.MeshStandardMaterial({
+    color: DARK,
+    roughness: 0.8,
     metalness: 0.1,
   });
-  // Bright vest on the rider so player can tell them apart
-  const vestGeo = new T.BoxGeometry(0.44, 0.5, 0.44);
-  const vestMat = new T.MeshStandardMaterial({
-    color: 0xffcc00,
-    roughness: 0.5,
-    metalness: 0.0,
-    emissive: 0xffcc00,
-    emissiveIntensity: 0.3,
+  const matSkin = new T.MeshStandardMaterial({
+    color: SKIN,
+    roughness: 0.8,
+  });
+  const matGrey = new T.MeshStandardMaterial({
+    color: GREY,
+    roughness: 0.7,
+    metalness: 0.2,
   });
 
-  // head sphere for headshot detection
+  // ── build rider geometry group (rabbit-helmet delivery rider) ──
+  function buildRiderMesh() {
+    const g = new T.Group();
+    g.name = "delivery-rider";
+
+    const m = (geo, mat, x, y, z) => {
+      const mesh = new T.Mesh(geo, mat.clone());
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+
+    // ── legs (two dark cylinders) ──
+    m(new T.CylinderGeometry(0.07, 0.08, 0.7, 6), matDark, -0.1, 0.35, 0);
+    m(new T.CylinderGeometry(0.07, 0.08, 0.7, 6), matDark, 0.1, 0.35, 0);
+
+    // ── torso (yellow raincoat) ──
+    const torso = m(new T.BoxGeometry(0.38, 0.55, 0.28), matYellow, 0, 1.0, 0);
+
+    // ── arms (yellow cylinders, slightly angled) ──
+    const armGeo = new T.CylinderGeometry(0.06, 0.06, 0.5, 6);
+    const leftArm = m(armGeo, matYellow, -0.26, 0.95, 0);
+    leftArm.rotation.z = 0.2;
+    const rightArm = m(armGeo, matYellow, 0.26, 0.95, 0);
+    rightArm.rotation.z = -0.2;
+
+    // ── delivery box on back (dark box with yellow edges) ──
+    const box = m(
+      new T.BoxGeometry(0.32, 0.36, 0.28),
+      matYellow,
+      0,
+      1.15,
+      -0.28,
+    );
+    // dark border strip on box
+    m(new T.BoxGeometry(0.34, 0.02, 0.3), matDark, 0, 1.34, -0.28);
+    m(new T.BoxGeometry(0.34, 0.02, 0.3), matDark, 0, 0.97, -0.28);
+    // vertical dark strips on box sides
+    m(new T.BoxGeometry(0.02, 0.36, 0.3), matDark, -0.17, 1.15, -0.28);
+    m(new T.BoxGeometry(0.02, 0.36, 0.3), matDark, 0.17, 1.15, -0.28);
+
+    // ── neck ──
+    m(new T.CylinderGeometry(0.06, 0.07, 0.1, 6), matSkin, 0, 1.33, 0);
+
+    // ── head (skin sphere) ──
+    const head = m(new T.SphereGeometry(0.14, 8, 6), matSkin, 0, 1.48, 0);
+
+    // ── HELMET (bright yellow half-sphere + brim) ──
+    // half sphere on top of head
+    const helmetGeo = new T.SphereGeometry(
+      0.17,
+      10,
+      6,
+      0,
+      Math.PI * 2,
+      0,
+      Math.PI * 0.55,
+    );
+    const helmet = m(helmetGeo, matYellowBright, 0, 1.52, 0);
+    // brim
+    m(new T.CylinderGeometry(0.19, 0.19, 0.02, 12), matYellowBright, 0, 1.5, 0);
+    // chin strap
+    m(new T.CylinderGeometry(0.005, 0.005, 0.14, 4), matDark, 0.12, 1.42, 0.05);
+    m(
+      new T.CylinderGeometry(0.005, 0.005, 0.14, 4),
+      matDark,
+      -0.12,
+      1.42,
+      0.05,
+    );
+
+    // ── RABBIT EARS (the key identifier!) ──
+    // Two tall yellow ear shapes on top of helmet
+    const earGeo = new T.CapsuleGeometry(0.035, 0.22, 4, 6);
+    const leftEar = m(earGeo, matYellowBright, -0.08, 1.8, -0.02);
+    leftEar.rotation.z = 0.12; // slight outward tilt
+    leftEar.rotation.x = -0.08;
+    const rightEar = m(earGeo, matYellowBright, 0.08, 1.8, -0.02);
+    rightEar.rotation.z = -0.12;
+    rightEar.rotation.x = -0.08;
+    // inner ear (darker tint)
+    const innerEarGeo = new T.CapsuleGeometry(0.018, 0.16, 3, 4);
+    const liEar = m(innerEarGeo, matSkin, -0.08, 1.8, 0.0);
+    liEar.rotation.z = 0.12;
+    liEar.rotation.x = -0.08;
+    const riEar = m(innerEarGeo, matSkin, 0.08, 1.8, 0.0);
+    riEar.rotation.z = -0.12;
+    riEar.rotation.x = -0.08;
+
+    // ── visor / goggles line (dark strip across face) ──
+    m(new T.BoxGeometry(0.22, 0.04, 0.06), matGrey, 0, 1.5, 0.12);
+
+    // ── shoes (dark boxes at bottom of legs) ──
+    m(new T.BoxGeometry(0.09, 0.06, 0.14), matDark, -0.1, 0.03, 0.02);
+    m(new T.BoxGeometry(0.09, 0.06, 0.14), matDark, 0.1, 0.03, 0.02);
+
+    return { group: g, head, torso };
+  }
+
+  // head sphere for headshot detection (invisible, kept for raycasting)
   const headGeo = new T.SphereGeometry(0.16, 8, 6);
   const headMat = new T.MeshStandardMaterial({
-    color: 0xffddaa,
+    color: SKIN,
     roughness: 0.8,
   });
 
@@ -163,31 +413,38 @@ export function createDelivery(G, { toast } = {}) {
     const dismount = dismountPoint(stovePos, entry);
     const exit = pickExit(dismount);
 
-    const group = new T.Group();
-    group.name = "delivery-rider";
+    // build the detailed rabbit-helmet rider mesh
+    const riderMesh = buildRiderMesh();
+    const group = riderMesh.group;
 
-    // body
-    const body = new T.Mesh(riderGeo, riderMat.clone());
-    body.position.y = 0.8;
-    body.castShadow = true;
+    // invisible hit-detection body (used by raycast)
+    const body = new T.Mesh(
+      new T.BoxGeometry(0.4, 1.0, 0.4),
+      new T.MeshBasicMaterial({ visible: false }),
+    );
+    body.position.y = 0.95;
     group.add(body);
 
-    // vest (high-vis)
-    const vest = new T.Mesh(vestGeo, vestMat.clone());
-    vest.position.y = 1.05;
-    vest.castShadow = true;
+    // invisible vest hitbox (same purpose)
+    const vest = new T.Mesh(
+      new T.BoxGeometry(0.44, 0.5, 0.44),
+      new T.MeshBasicMaterial({ visible: false }),
+    );
+    vest.position.y = 1.1;
     group.add(vest);
 
-    // head
-    const head = new T.Mesh(headGeo, headMat.clone());
-    head.position.y = 1.72;
-    head.castShadow = true;
+    // invisible head hitbox for headshot detection
+    const head = new T.Mesh(
+      headGeo,
+      new T.MeshBasicMaterial({ visible: false }),
+    );
+    head.position.y = 1.52;
     group.add(head);
 
-    // scooter
-    const scooter = new T.Mesh(scooterGeo, scooterMat.clone());
-    scooter.position.y = 0.4;
-    scooter.castShadow = true;
+    // electric scooter (bright yellow moped)
+    const scooter = buildScooter();
+    // position so rider appears to be sitting on the seat
+    scooter.position.set(0, 0, 0.1);
     group.add(scooter);
 
     group.position.copy(entry);
@@ -262,7 +519,7 @@ export function createDelivery(G, { toast } = {}) {
 
   // ── update hit positions (for raycast) ──
   function syncHitPos(rider) {
-    rider.headPos.set(rider.pos.x, rider.pos.y + 1.72, rider.pos.z);
+    rider.headPos.set(rider.pos.x, rider.pos.y + 1.52, rider.pos.z);
     rider.chest.set(rider.pos.x, rider.pos.y + 1.0, rider.pos.z);
     rider.feet.set(rider.pos.x, rider.pos.y, rider.pos.z);
   }

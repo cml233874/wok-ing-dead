@@ -492,4 +492,15 @@ export default {
   "delivery.arriving": "外卖小哥来了——保护他！",
   "delivery.pickup": "小哥正在取餐",
   "delivery.escaped": "小哥安全离开",
+
+  // 升级商店
+  "shop.title": "升级商店",
+  "shop.hint": "[B] 关闭",
+  "shop.poor": "金币不足！",
+  "shop.wok": "镬气",
+  "shop.wok.d": "伤害 +25%",
+  "shop.ammo": "弹药库",
+  "shop.ammo.d": "弹药容量 +30%",
+  "shop.shield": "护盾",
+  "shop.shield.d": "+50 护盾值",
 };
